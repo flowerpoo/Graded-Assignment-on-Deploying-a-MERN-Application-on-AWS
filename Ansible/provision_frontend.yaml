@@ -1,0 +1,59 @@
+---
+- name: Deployment in frontend application 
+  hosts: frontend
+  become: yes
+ 
+
+  tasks:
+    - name: Update apt package cache (for Debian/Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Docker dependencies
+      package:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+      when: ansible_os_family == 'Debian'
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+      when: ansible_os_family == 'Debian'
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Docker
+      package:
+        name: docker-ce
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+
+    - name: Pull Docker image for frontend
+      docker_image:
+        name: flowerking21/tmfrontend:latest
+        source: pull
+
+    - name: Run Docker container for frontend
+      docker_container:
+        name: frontend_container
+        image: flowerking21/tmfrontend:latest
+        ports:
+          - "3000:3000"
+        restart_policy: always
